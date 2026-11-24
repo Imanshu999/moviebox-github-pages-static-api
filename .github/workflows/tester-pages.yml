@@ -13,6 +13,7 @@ on:
       - 'tester/**'
       - 'web/**'
       - 'playground/**'
+      - 'v1/**'
       - '.github/workflows/tester-pages.yml'
 
 permissions:
@@ -45,6 +46,9 @@ jobs:
           cp -R tester/. dist/tester/
           cp -R web/. dist/web/
           cp -R playground/. dist/playground/
+          mkdir -p dist/v1
+          test -f v1/index.html
+          cp v1/index.html dist/v1/index.html
       - name: Validate API JSON and client pages
         run: |
           python3 - <<'PY'
@@ -61,6 +65,8 @@ jobs:
           catalog = json.loads((root / "v1/catalog.json").read_text(encoding="utf-8"))
           if not isinstance(catalog, dict) or not isinstance(catalog.get("results"), list) or not catalog["results"]:
               raise SystemExit("Catalog is empty or invalid; refusing to publish an empty catalog.")
+          if not (root / "v1/index.html").is_file():
+              raise SystemExit("Missing API directory index: dist/v1/index.html")
           for name in ["tester", "web", "playground"]:
               page = root / name / "index.html"
               if not page.is_file() or page.stat().st_size < 1000:
