@@ -33,7 +33,9 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
       - name: Build static API JSON from the shared provider core
-        run: cargo run --locked --release --bin moviebox-static-export -- dist
+        run: |
+          cargo generate-lockfile
+          cargo run --release --bin moviebox-static-export -- dist
       - name: Add static client websites
         run: |
           test -f tester/index.html
