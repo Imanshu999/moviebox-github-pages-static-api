@@ -1,7 +1,9 @@
-name: Publish MovieBox API Tester
+name: Publish MovieBox Static API and Web Clients
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
   push:
     branches: [main, master]
     paths:
@@ -9,6 +11,8 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'tester/**'
+      - 'web/**'
+      - 'playground/**'
       - '.github/workflows/tester-pages.yml'
 
 permissions:
@@ -25,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,14 +39,18 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
-      - name: Build static API JSON
+      - name: Build static API JSON from the shared provider core
         run: cargo run --locked --release --bin moviebox-static-export -- dist
-      - name: Add API tester website
+      - name: Add static client websites
         run: |
           test -f tester/index.html
-          mkdir -p dist/tester
+          test -f web/index.html
+          test -f playground/index.html
+          mkdir -p dist/tester dist/web dist/playground
           cp -R tester/. dist/tester/
-      - name: Validate JSON and tester output
+          cp -R web/. dist/web/
+          cp -R playground/. dist/playground/
+      - name: Validate API JSON and client pages
         run: |
           python3 - <<'PY'
           import json
@@ -56,15 +65,17 @@ jobs:
                   json.load(stream)
           catalog = json.loads((root / "v1/catalog.json").read_text(encoding="utf-8"))
           if not isinstance(catalog, dict) or not isinstance(catalog.get("results"), list) or not catalog["results"]:
-              raise SystemExit("Catalog is empty or invalid; deployment stopped.")
-          page = root / "tester/index.html"
-          if not page.is_file() or page.stat().st_size < 1000:
-              raise SystemExit("Tester page missing or incomplete.")
-          print("Validated", len(catalog["results"]), "catalog entries and tester page.")
+              raise SystemExit("Catalog is empty or invalid; preserving the previous Pages deployment.")
+          for name in ["tester", "web", "playground"]:
+              page = root / name / "index.html"
+              if not page.is_file() or page.stat().st_size < 1000:
+                  raise SystemExit(f"Missing or incomplete client page: {page}")
+          print("Validated", len(catalog["results"]), "real catalog entries and all three client pages.")
           PY
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
