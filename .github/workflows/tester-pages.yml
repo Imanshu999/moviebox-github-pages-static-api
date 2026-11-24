@@ -2,6 +2,14 @@ name: Publish MovieBox API Tester
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'tester/**'
+      - '.github/workflows/tester-pages.yml'
 
 permissions:
   contents: read
