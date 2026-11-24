@@ -1,4 +1,4 @@
-name: Publish MovieBox Static API and Web Clients
+name: Build and Publish MovieBox Static API
 
 on:
   workflow_dispatch:
@@ -16,27 +16,18 @@ on:
       - '.github/workflows/tester-pages.yml'
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: moviebox-pages
+  group: moviebox-static-publish
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build-and-publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Cache Rust dependencies
@@ -67,17 +58,17 @@ jobs:
                   json.load(stream)
           catalog = json.loads((root / "v1/catalog.json").read_text(encoding="utf-8"))
           if not isinstance(catalog, dict) or not isinstance(catalog.get("results"), list) or not catalog["results"]:
-              raise SystemExit("Catalog is empty or invalid; preserving the previous Pages deployment.")
+              raise SystemExit("Catalog is empty or invalid; refusing to publish an empty catalog.")
           for name in ["tester", "web", "playground"]:
               page = root / name / "index.html"
               if not page.is_file() or page.stat().st_size < 1000:
                   raise SystemExit(f"Missing or incomplete client page: {page}")
-          print("Validated", len(catalog["results"]), "real catalog entries and all three client pages.")
+          print("Validated", len(catalog["results"]), "catalog entries and all client pages.")
           PY
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish static site to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          force_orphan: true
