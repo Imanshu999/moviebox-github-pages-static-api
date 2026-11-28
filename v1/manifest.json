@@ -1,0 +1,20 @@
+{
+  "apiVersion": "1.0",
+  "count": 74,
+  "endpoints": [
+    "v1/manifest.json",
+    "v1/catalog.json",
+    "v1/trending.json",
+    "v1/latest.json",
+    "v1/movies.json",
+    "v1/series.json",
+    "v1/categories.json"
+  ],
+  "generatedAt": 1795879873,
+  "notes": [
+    "Static catalog generated from the existing MovieBox provider.",
+    "Search and filtering should be performed locally by clients.",
+    "Only metadata returned by the provider is exported; unavailable fields are null or omitted."
+  ],
+  "provider": "MovieBox"
+}
